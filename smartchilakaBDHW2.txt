@@ -1,0 +1,253 @@
+Smart Chilaka
+Big Data Analytics
+Spring Semester
+February 10, 2020
+
+scala> val tf = sc.textFile("block_1.csv")
+tf: org.apache.spark.rdd.RDD[String] = block_1.csv MapPartitionsRDD[1] at textFile at <console>:24
+
+scala> tf.first 
+res0: String = "id_1","id_2","cmp_fname_c1","cmp_fname_c2","cmp_lname_c1","cmp_lname_c2","cmp_sex","cmp_bd","cmp_bm","cmp_by","cmp_plz","is_match"
+
+scala> val head = tf.collect() 
+[Stage 1:> head: Array[String] = Array("id_1","id_2","cmp_fname_c1","cmp_fname_c2","cmp_lname_c1","cmp_lname_c2","cmp_sex","cmp_bd","cmp_bm","cmp_by","cmp_plz","is_match", 37291,53113,0.833333333333333,?,1,?,1,1,1,1,0,TRUE, 39086,47614,1,?,1,?,1,1,1,1,1,TRUE, 70031,70237,1,?,1,?,1,1,1,1,1,TRUE, 84795,97439,1,?,1,?,1,1,1,1,1,TRUE, 36950,42116,1,?,1,1,1,1,1,1,1,TRUE, 42413,48491,1,?,1,?,1,1,1,1,1,TRUE, 25965,64753,1,?,1,?,1,1,1,1,1,TRUE, 49451,90407,1,?,1,?,1,1,1,1,0,TRUE, 39932,40902,1,?,1,?,1,1,1,1,1,TRUE, 46626,47940,1,?,1,?,1,1,1,1,1,TRUE, 48948,98379,1,?,1,?,1,1,1,1,1,TRUE, 4767,4826,1,?,1,?,1,1,1,1,1,TRUE, 45463,69659,1,?,1,?,1,1,1,1,1,TRUE, 11367,13169,1,?,1,?,1,1,1,1,1,TRUE, 10782,89636,1,?,1,?,1,0,1,1,1,TRUE, 26206,39147,1,?,1,?,1,1,1,1,1,TRUE, 16662,27083,1,1,1,?,1,1,1,1,1,TRUE, 18823,3020...
+
+scala> head.length 
+res1: Int = 574914
+
+scala> def isHeader(line: String) = line.contains("id_1") 
+isHeader: (line: String)Boolean
+
+scala> head.filter(isHeader).foreach(println) 
+"id_1","id_2","cmp_fname_c1","cmp_fname_c2","cmp_lname_c1","cmp_lname_c2","cmp_sex","cmp_bd","cmp_bm","cmp_by","cmp_plz","is_match"
+
+scala> head.filterNot(isHeader).length 
+res3: Int = 574913
+
+scala> head.filter(x => !isHeader(x)).length 
+res4: Int = 574913
+
+scala> head.filter(!isHeader(_)).length 
+res5: Int = 574913
+
+scala> val noheader = tf.filter(x => !isHeader(x))
+noheader: org.apache.spark.rdd.RDD[String] = MapPartitionsRDD[2] at filter at <console>:27
+
+scala> noheader.first
+res6: String = 37291,53113,0.833333333333333,?,1,?,1,1,1,1,0,TRUE
+
+scala> val line = head(3)
+line: String = 70031,70237,1,?,1,?,1,1,1,1,1,TRUE
+
+scala> val pieces = line.split(',')
+pieces: Array[String] = Array(70031, 70237, 1, ?, 1, ?, 1, 1, 1, 1, 1, TRUE)
+
+scala> val id1 = pieces(0).toInt // converts id1 to int
+id1: Int = 70031
+
+scala> val id2 = pieces(1).toInt // converts id2 to int
+id2: Int = 70237
+
+scala> val matched = pieces(11).toBoolean
+matched: Boolean = true
+
+scala> val rawscores = pieces.slice(2, 11)
+rawscores: Array[String] = Array(1, ?, 1, ?, 1, 1, 1, 1, 1)
+
+scala> rawscores.map(s => s.toDouble)
+java.lang.NumberFormatException: For input string: "?"
+  at sun.misc.FloatingDecimal.readJavaFormatString(FloatingDecimal.java:2043)
+  at sun.misc.FloatingDecimal.parseDouble(FloatingDecimal.java:110)
+  at java.lang.Double.parseDouble(Double.java:538)
+  at scala.collection.immutable.StringLike.toDouble(StringLike.scala:321)
+  at scala.collection.immutable.StringLike.toDouble$(StringLike.scala:321)
+  at scala.collection.immutable.StringOps.toDouble(StringOps.scala:33)
+  at $anonfun$res7$1(<console>:26)
+  at $anonfun$res7$1$adapted(<console>:26)
+  at scala.collection.TraversableLike.$anonfun$map$1(TraversableLike.scala:238)
+  at scala.collection.IndexedSeqOptimized.foreach(IndexedSeqOptimized.scala:36)
+  at scala.collection.IndexedSeqOptimized.foreach$(IndexedSeqOptimized.scala:33)
+  at scala.collection.mutable.ArrayOps$ofRef.foreach(ArrayOps.scala:198)
+  at scala.collection.TraversableLike.map(TraversableLike.scala:238)
+  at scala.collection.TraversableLike.map$(TraversableLike.scala:231)
+  at scala.collection.mutable.ArrayOps$ofRef.map(ArrayOps.scala:198)
+  ... 47 elided
+
+scala> def toDouble(s: String) = {
+     | if ("?".equals(s)) Double.NaN else s.toDouble
+     | }
+toDouble: (s: String)Double
+
+scala> val scores = rawscores.map(toDouble) 
+scores: Array[Double] = Array(1.0, NaN, 1.0, NaN, 1.0, 1.0, 1.0, 1.0, 1.0)
+
+scala> def parse(line: String) = {
+     | val pieces = line.split(',')
+     | val id1 = pieces(0).toInt
+     | val id2 = pieces(1).toInt
+     | val scores = pieces.slice(2, 11).map(toDouble)
+     | val matched = pieces(11).toBoolean
+     | (id1, id2, scores, matched)
+     | }
+parse: (line: String)(Int, Int, Array[Double], Boolean)
+
+scala> val tup = parse(line) // this line decalares a new variable called tup and stores the values of parse(line) in it.
+tup: (Int, Int, Array[Double], Boolean) = (70031,70237,Array(1.0, NaN, 1.0, NaN, 1.0, 1.0, 1.0, 1.0, 1.0),true)
+
+scala> tup._1 // to view id1 that was converted to int and stored in tup.
+res8: Int = 70031
+
+scala> tup._2 // to view id2 that was converted to int and stored in tup.
+res9: Int = 70237
+
+scala> case class MatchData(id1: Int, id2: Int, scores: Array[Double], matched: Boolean) // defining a new class called MatchData
+defined class MatchData
+
+scala> def parse(line: String) = {
+     | val pieces = line.split(',')
+     | val id1 = pieces(0).toInt
+     | val id2 = pieces(1).toInt
+     | val scores = pieces.slice(2, 11).map(toDouble)
+     | val matched = pieces(11).toBoolean
+     | MatchData(id1, id2, scores, matched)
+     | }
+parse: (line: String)MatchData
+
+scala> def parse(line: String) = {
+     | val pieces = line.split(',')
+     | val id1 = pieces(0).toInt
+     | val id2 = pieces(1).toInt
+     | val scores = pieces.slice(2, 11).map(toDouble)
+     | val matched = pieces(11).toBoolean
+     | MatchData(id1, id2, scores, matched)
+     | }
+parse: (line: String)MatchData
+
+scala> val md = parse(line)
+md: MatchData = MatchData(70031,70237,[D@f822b7a,true)
+
+scala> md.matched
+res10: Boolean = true
+
+scala> md.id1
+res11: Int = 70031
+
+scala> md.id2
+res12: Int = 70237
+
+scala> md.scores
+res13: Array[Double] = Array(1.0, NaN, 1.0, NaN, 1.0, 1.0, 1.0, 1.0, 1.0)
+
+scala> val mds = head.filter(x => !isHeader(x)).map(x => parse(x))
+mds: Array[MatchData] = Array(MatchData(37291,53113,[D@4ef14401,true), MatchData(39086,47614,[D@5595db29,true), MatchData(70031,70237,[D@4cb61157,true), MatchData(84795,97439,[D@522b680d,true), MatchData(36950,42116,[D@16beef05,true), MatchData(42413,48491,[D@6d092268,true), MatchData(25965,64753,[D@11c9ba37,true), MatchData(49451,90407,[D@182bc303,true), MatchData(39932,40902,[D@798cc1c4,true), MatchData(46626,47940,[D@5db2b6ff,true), MatchData(48948,98379,[D@176a77c,true), MatchData(4767,4826,[D@47035f8a,true), MatchData(45463,69659,[D@589e244f,true), MatchData(11367,13169,[D@105374ed,true), MatchData(10782,89636,[D@242a7cdc,true), MatchData(26206,39147,[D@790888dc,true), MatchData(16662,27083,[D@509d77ee,true), MatchData(18823,30204,[D@5be2850c,true), MatchData(38545,85418,[D@2c59de3...
+
+scala> val parsed = noheader.map(line => parse(line))
+parsed: org.apache.spark.rdd.RDD[MatchData] = MapPartitionsRDD[3] at map at <console>:29
+
+scala> parsed.cache()
+res14: parsed.type = MapPartitionsRDD[3] at map at <console>:29
+
+scala> val grouped = mds.groupBy(md => md.matched)
+grouped: scala.collection.immutable.Map[Boolean,Array[MatchData]] = Map(false -> Array(MatchData(20206,55692,[D@5c3396d4,false), MatchData(13466,69531,[D@1c473ef6,false), MatchData(5128,12019,[D@3aa9f6a6,false), MatchData(92397,96348,[D@24b3ee91,false), MatchData(52111,54246,[D@64f649e5,false), MatchData(16024,27196,[D@41e37b03,false), MatchData(5975,16910,[D@348ab95f,false), MatchData(6444,92509,[D@f760e39,false), MatchData(66415,79216,[D@5919c753,false), MatchData(41333,91953,[D@3f89410,false), MatchData(49601,65455,[D@62598571,false), MatchData(17909,44189,[D@5d6148c5,false), MatchData(63978,69016,[D@4ad53f65,false), MatchData(14076,42054,[D@dca6a3b,false), MatchData(79602,97888,[D@231604fe,false), MatchData(39803,89596,[D@74664739,false), MatchData(81129,89653,[D@172b70c7,false), Ma...
+
+scala> grouped.mapValues(x => x.size).foreach(println)
+(false,572820)
+(true,2093)
+
+scala> val matchCounts = parsed.map(md => md.matched).countByValue()
+[Stage 4:>                                                          (0 + 0) / 2]20/02/10 12:27:25 WARN DAGScheduler: Broadcasting large task binary with size 26.2 MiB
+[Stage 4:>                                                          (0 + 2) /                                                                               matchCounts: scala.collection.Map[Boolean,Long] = Map(false -> 572820, true -> 2093)
+
+scala> val matchCountsSeq = matchCounts.toSeq
+matchCountsSeq: Seq[(Boolean, Long)] = Vector((false,572820), (true,2093))
+
+scala> matchCountsSeq.sortBy(_._1).foreach(println)
+(false,572820)
+(true,2093)
+
+scala> matchCountsSeq.sortBy(_._2).foreach(println)
+(true,2093)
+(false,572820)
+
+scala> parsed.map(md => md.scores(0)).stats()
+20/02/10 12:46:20 WARN DAGScheduler: Broadcasting large task binary with size 26.1 MiB
+[Stage 6:>                                                          (0 + 0) / [Stage 6:>                                                          (0 + 2) /                                                                               res19: org.apache.spark.util.StatCounter = (count: 574913, mean: NaN, stdev: NaN, max: NaN, min: NaN)
+
+scala> import java.lang.Double.isNaN
+import java.lang.Double.isNaN
+
+scala> parsed.map(md => md.scores(0)).filter(!isNaN(_)).stats()
+20/02/10 12:48:12 WARN DAGScheduler: Broadcasting large task binary with size 26.1 MiB
+[Stage 7:>                                                          (0 + 0) / [Stage 7:>                                                          (0 + 2) /                                                                               res20: org.apache.spark.util.StatCounter = (count: 574811, mean: 0.712759, stdev: 0.388928, max: 1.000000, min: 0.000000)
+
+scala> import org.apache.spark.util.StatCounter
+import org.apache.spark.util.StatCounter
+
+scala> class NAStatCounter extends Serializable{
+     | val stats: StatCounter = new StatCounter()
+     | var missing: Long = 0
+     | def add(x: Double) : NAStatCounter = {
+     | if (java.lang.Double.isNaN(x)){
+     | missing += 1
+     | } else {
+     | stats.merge(x)
+     | }
+     | this
+     | }
+     | def merge(other: NAStatCounter): NAStatCounter = {
+     | stats.merge(other.stats)
+     | missing += other.missing
+     | this
+     | }
+     | override def toString = {
+     | "stats: " + stats.toString + "NaN: " + missing
+     | }
+     | }
+defined class NAStatCounter
+
+scala> object NAStatCounter extends Serializable {
+     | def apply (x: Double) = new NAStatCounter().add(x)
+     | }
+defined object NAStatCounter
+warning: previously defined class NAStatCounter is not a companion to object NAStatCounter.
+Companions must be defined together; you may wish to use :paste mode for this.
+
+scala> val arr = Array(1.0, Double.NaN, 17.29)
+arr: Array[Double] = Array(1.0, NaN, 17.29)
+
+scala> val nas = arr.map(d => NAStatCounter (d))
+nas: Array[NAStatCounter] = Array(stats: (count: 1, mean: 1.000000, stdev: 0.000000, max: 1.000000, min: 1.000000)NaN: 0, stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 1, stats: (count: 1, mean: 17.290000, stdev: 0.000000, max: 17.290000, min: 17.290000)NaN: 0)
+
+scala> val nasRDD = parsed.map(md => {
+     | md.scores.map(d => NAStatCounter(d))
+     | })
+nasRDD: org.apache.spark.rdd.RDD[Array[NAStatCounter]] = MapPartitionsRDD[13] at map at <console>:31
+
+scala> val nas1 = Array(1.0, Double.NaN).map(d => NAStatCounter(d))
+nas1: Array[NAStatCounter] = Array(stats: (count: 1, mean: 1.000000, stdev: 0.000000, max: 1.000000, min: 1.000000)NaN: 0, stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 1)
+
+scala>  val nas2 = Array(Double.NaN, 2.0).map(d => NAStatCounter(d))
+nas2: Array[NAStatCounter] = Array(stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 1, stats: (count: 1, mean: 2.000000, stdev: 0.000000, max: 2.000000, min: 2.000000)NaN: 0)
+
+
+scala> val merged = nas1.zip(nas2).map(p => p._1.merge(p._2))
+merged: Array[NAStatCounter] = Array(stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 2, stats: (count: 2, mean: 2.000000, stdev: 0.000000, max: 2.000000, min: 2.000000)NaN: 0)
+
+scala> val merged = nas1.zip(nas2).map { case (a, b) => a.merge(b) }
+merged: Array[NAStatCounter] = Array(stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 3, stats: (count: 3, mean: 2.000000, stdev: 0.000000, max: 2.000000, min: 2.000000)NaN: 0)
+
+scala> val nas = List(nas1, nas2)
+nas: List[Array[NAStatCounter]] = List(Array(stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 3, stats: (count: 3, mean: 2.000000, stdev: 0.000000, max: 2.000000, min: 2.000000)NaN: 0), Array(stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 1, stats: (count: 1, mean: 2.000000, stdev: 0.000000, max: 2.000000, min: 2.000000)NaN: 0))
+
+scala> val merged = nas.reduce((n1, n2) => {
+     | n1.zip(n2).map { case (a, b) => a.merge(b) }
+     | })
+merged: Array[NAStatCounter] = Array(stats: (count: 0, mean: 0.000000, stdev: NaN, max: -Infinity, min: Infinity)NaN: 4, stats: (count: 4, mean: 2.000000, stdev: 0.000000, max: 2.000000, min: 2.000000)NaN: 0)
+
+scala> val reduced = nasRDD.reduce((n1, n2) => {
+     | n1.zip(n2).map { case (a, b) => a.merge (b) }
+     | })
+20/02/10 14:16:15 WARN DAGScheduler: Broadcasting large task binary with size 26.2 MiB
+[Stage 8:>                                                          (0 + 2) /                                                                               reduced: Array[NAStatCounter] = Array(stats: (count: 574811, mean: 0.712759, stdev: 0.388928, max: 1.000000, min: 0.000000)NaN: 102, stats: (count: 10325, mean: 0.897759, stdev: 0.274244, max: 1.000000, min: 0.000000)NaN: 564588, stats: (count: 574913, mean: 0.315572, stdev: 0.334249, max: 1.000000, min: 0.000000)NaN: 0, stats: (count: 239, mean: 0.326916, stdev: 0.377517, max: 1.000000, min: 0.000000)NaN: 574674, stats: (count: 574913, mean: 0.955092, stdev: 0.207101, max: 1.000000, min: 0.000000)NaN: 0, stats: (count: 574851, mean: 0.224756, stdev: 0.417421, max: 1.000000, min: 0.000000)NaN: 62, stats: (count: 574851, mean: 0.488636, stdev: 0.499871, max: 1.000000, min: 0.000000)NaN: 62, stats: (count: 574851, mean: 0.222666, stdev: 0.416036, max: 1.000000, min: 0.000000)NaN: 62, stat...
+
+scala> reduced.foreach(println) // outputs an array of statistics for each field.. 
